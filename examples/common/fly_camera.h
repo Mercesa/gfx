@@ -42,4 +42,6 @@ struct FlyCamera
 };
 
 FlyCamera CreateFlyCamera(GfxContext gfx, glm::vec3 const &eye, glm::vec3 const &center);
+void UpdateFlyCameraMatrix(GfxContext gfx, FlyCamera& fly_camera);
+
 void UpdateFlyCamera(GfxContext gfx, GfxWindow window, FlyCamera &fly_camera);

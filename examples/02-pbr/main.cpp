@@ -28,6 +28,9 @@ SOFTWARE.
 #include "fly_camera.h"
 #include "glm/gtc/matrix_transform.hpp"
 
+#include <iostream>
+#include <chrono>
+
 namespace
 {
 
@@ -102,7 +105,7 @@ int main()
     gfxProgramSetParameter(gfx, pbr_program, "g_IrradianceBuffer", ibl.irradiance_buffer);
     gfxProgramSetParameter(gfx, pbr_program, "g_EnvironmentBuffer", ibl.environment_buffer);
 
-    gfxProgramSetParameter(gfx, sky_program, "g_EnvironmentBuffer", ibl.environment_buffer);
+    gfxProgramSetParameter(gfx, sky_program, "g_Envi&ronmentBuffer", ibl.environment_buffer);
 
     gfxProgramSetParameter(gfx, taa_program, "g_ColorBuffer", color_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_HistoryBuffer", history_buffer);
@@ -113,12 +116,45 @@ int main()
     // Run the application loop
     FlyCamera fly_camera = CreateFlyCamera(gfx, glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
+    float delta_time = 0.0f;
+    auto last_frame = std::chrono::high_resolution_clock::now();
     while(!gfxWindowIsCloseRequested(window))
     {
+        auto current_frame = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::centi> elapsed = current_frame - last_frame;
+        delta_time = elapsed.count();
+        last_frame = current_frame;
+
+
+        glm::vec3 camera_front = glm::vec3(0.0f, 0.0f, -1.0f);
+        glm::vec3 camera_direction = (fly_camera.eye - fly_camera.center);
+        glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+        glm::vec3 camera_right = glm::normalize(glm::cross(up, camera_direction));
+        
+        float speed = 1.0f;
+        if (gfxWindowIsKeyDown(window, 0x57)) {
+            fly_camera.eye += camera_front * delta_time;
+        }
+        if (gfxWindowIsKeyDown(window, 0x41)) {
+            fly_camera.eye -= camera_right * delta_time;
+        }
+        if (gfxWindowIsKeyDown(window, 0x53)) {
+            fly_camera.eye -= camera_front * delta_time;
+        }
+        if (gfxWindowIsKeyDown(window, 0x44)) {
+            fly_camera.eye += camera_right * delta_time;
+        }
+        fly_camera.center = fly_camera.center + glm::vec3(0.0f, 0.0f, -1.0f);
+
+
+        UpdateFlyCameraMatrix(gfx, fly_camera);
+
+
         gfxWindowPumpEvents(window);
 
         // Update our GPU scene and camera
         UpdateGpuScene(gfx, scene, gpu_scene);
+
         UpdateFlyCamera(gfx, window, fly_camera);
 
         gfxProgramSetParameter(gfx, pbr_program, "g_Eye", fly_camera.eye);

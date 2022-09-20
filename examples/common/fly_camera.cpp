@@ -63,6 +63,15 @@ FlyCamera CreateFlyCamera(GfxContext gfx, glm::vec3 const &eye, glm::vec3 const 
     return fly_camera;
 }
 
+void UpdateFlyCameraMatrix(GfxContext gfx, FlyCamera& fly_camera) {
+    float const aspect_ratio = gfxGetBackBufferWidth(gfx) / (float)gfxGetBackBufferHeight(gfx);
+
+    fly_camera.view = glm::lookAt(fly_camera.eye, fly_camera.center, fly_camera.up);
+    fly_camera.proj = glm::perspective(0.6f, aspect_ratio, 1e-1f, 1e4f);
+    fly_camera.view_proj = fly_camera.proj * fly_camera.view;
+
+}
+
 void UpdateFlyCamera(GfxContext gfx, GfxWindow window, FlyCamera &fly_camera)
 {
     // Update camera history
