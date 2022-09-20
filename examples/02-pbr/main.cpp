@@ -118,6 +118,9 @@ int main()
 
     float delta_time = 0.0f;
     auto last_frame = std::chrono::high_resolution_clock::now();
+
+    float yaw = -90.0f;
+    float pitch = 0.0f;
     while(!gfxWindowIsCloseRequested(window))
     {
         auto current_frame = std::chrono::high_resolution_clock::now();
@@ -126,31 +129,49 @@ int main()
         last_frame = current_frame;
 
 
-        glm::vec3 camera_front = glm::vec3(0.0f, 0.0f, -1.0f);
-        glm::vec3 camera_direction = (fly_camera.eye - fly_camera.center);
+
+        gfxWindowPumpEvents(window);
+
+        yaw += gfxWindowXMouseOffset(window) * 0.1f;
+        pitch += gfxWindowYMouseOffset(window) * 0.1f;
+
+        glm::vec3 direction;
+        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        direction.y = sin(glm::radians(pitch));
+        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        glm::vec3 camera_front = glm::normalize(direction);
+
         glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 camera_right = glm::normalize(glm::cross(up, camera_direction));
-        
+        glm::vec3 camera_right = glm::normalize(glm::cross(up, camera_front));
+        glm::vec3 camera_up = glm::normalize(glm::cross(camera_front, camera_right));
+
+
         float speed = 1.0f;
         if (gfxWindowIsKeyDown(window, 0x57)) {
             fly_camera.eye += camera_front * delta_time;
         }
         if (gfxWindowIsKeyDown(window, 0x41)) {
-            fly_camera.eye -= camera_right * delta_time;
+            fly_camera.eye += camera_right * delta_time;
         }
         if (gfxWindowIsKeyDown(window, 0x53)) {
             fly_camera.eye -= camera_front * delta_time;
         }
         if (gfxWindowIsKeyDown(window, 0x44)) {
-            fly_camera.eye += camera_right * delta_time;
+            fly_camera.eye -= camera_right * delta_time;
         }
-        fly_camera.center = fly_camera.center + glm::vec3(0.0f, 0.0f, -1.0f);
 
+        if (gfxWindowIsKeyDown(window, 0x1B)) {
+            break;
+        }
+
+        fly_camera.center = fly_camera.eye + camera_front;
+        fly_camera.up = camera_up;
+
+        std::cout << "x: " << fly_camera.center.x << std::endl;
+        std::cout << "z: " << fly_camera.center.z << std::endl;
 
         UpdateFlyCameraMatrix(gfx, fly_camera);
 
-
-        gfxWindowPumpEvents(window);
 
         // Update our GPU scene and camera
         UpdateGpuScene(gfx, scene, gpu_scene);
