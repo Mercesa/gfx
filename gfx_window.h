@@ -56,6 +56,10 @@ bool gfxWindowIsKeyReleased(GfxWindow window, uint32_t key_code);
 bool gfxWindowIsCloseRequested(GfxWindow window);
 bool gfxWindowIsMinimized(GfxWindow window);
 bool gfxWindowIsMaximized(GfxWindow window);
+int gfxWindowXMousePosition(GfxWindow window);
+int gfxWindowYMousePosition(GfxWindow window);
+int gfxWindowXMouseOffset(GfxWindow window);
+int gfxWindowYMouseOffset(GfxWindow window);
 
 #endif //! GFX_INCLUDE_GFX_WINDOW_H
 
@@ -80,6 +84,13 @@ class GfxWindowInternal
     bool is_close_requested_ = false;
     bool is_key_down_[VK_OEM_CLEAR] = {};
     bool is_previous_key_down_[VK_OEM_CLEAR] = {};
+    int mouse_position_x_ = 0;
+    int mouse_position_y_ = 0;
+    int last_mouse_position_x_ = 0;
+    int last_mouse_position_y_ = 0;
+    float x_offset;
+    float y_offset;
+ 
 
 public:
     GfxWindowInternal(GfxWindow &window) { window.handle = reinterpret_cast<uint64_t>(this); }
@@ -182,6 +193,30 @@ public:
         return is_maximized_;
     }
 
+    inline int getXMousePosition() const
+    {
+        return mouse_position_x_;
+    }
+    
+    inline int getYMousePosition() const
+    {
+        return mouse_position_y_;
+    }
+
+    inline float getXMouseOffset()
+    {
+        float temp_offset = x_offset;
+        x_offset = 0.0f;
+        return temp_offset;
+    }
+
+    inline float getYMouseOffset()
+    {
+        float temp_offset = y_offset;
+        y_offset = 0.0f;
+        return temp_offset;
+    }
+
     static inline GfxWindowInternal *GetGfxWindow(GfxWindow window) { return reinterpret_cast<GfxWindowInternal *>(window.handle); }
 
 private:
@@ -206,6 +241,27 @@ private:
     {
         for(uint32_t i = 0; i < ARRAYSIZE(is_key_down_); ++i)
             is_key_down_[i] = false;
+    }
+
+    inline void updateMousePosition(int x, int y) 
+    {
+        static bool first_update = true;
+
+        if (first_update) {
+            this->last_mouse_position_x_ = x;
+            this->last_mouse_position_y_ = y;
+            first_update = false;
+        }
+
+        x_offset = x - this->last_mouse_position_x_;
+        y_offset = this->last_mouse_position_y_ - y;
+
+        this->last_mouse_position_x_ = x;
+        this->last_mouse_position_y_ = y;
+
+        this->mouse_position_x_ = x;
+        this->mouse_position_y_ = y;
+
     }
 
     static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_param)
@@ -233,6 +289,12 @@ private:
                     gfx_window->resetKeyBindings();
                 }
                 break;
+            case WM_MOUSEMOVE:
+                {
+                uint32_t x_position = GET_X_LPARAM(l_param);
+                uint32_t y_position = GET_Y_LPARAM(l_param);
+                gfx_window->updateMousePosition(x_position, y_position);
+                }
             case WM_CHAR:
             case WM_SETCURSOR:
             case WM_DEVICECHANGE:
@@ -328,5 +390,34 @@ bool gfxWindowIsMaximized(GfxWindow window)
     if(!gfx_window) return false;   // invalid window handle
     return gfx_window->getIsMaximized();
 }
+
+int gfxWindowXMousePosition(GfxWindow window)
+{
+    GfxWindowInternal* gfx_window = GfxWindowInternal::GetGfxWindow(window);
+    if (!gfx_window) return false;   // invalid window handle
+    return gfx_window->getXMousePosition();
+}
+
+int gfxWindowYMousePosition(GfxWindow window)
+{
+    GfxWindowInternal* gfx_window = GfxWindowInternal::GetGfxWindow(window);
+    if (!gfx_window) return false;   // invalid window handle
+    return gfx_window->getYMousePosition();
+}
+
+int gfxWindowXMouseOffset(GfxWindow window)
+{
+    GfxWindowInternal* gfx_window = GfxWindowInternal::GetGfxWindow(window);
+    if (!gfx_window) return false;   // invalid window handle
+    return gfx_window->getXMouseOffset();
+}
+
+int gfxWindowYMouseOffset(GfxWindow window)
+{
+    GfxWindowInternal* gfx_window = GfxWindowInternal::GetGfxWindow(window);
+    if (!gfx_window) return false;   // invalid window handle
+    return gfx_window->getYMouseOffset();
+}
+
 
 #endif //! GFX_IMPLEMENTATION_DEFINE
