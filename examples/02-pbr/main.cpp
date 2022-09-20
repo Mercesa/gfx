@@ -128,8 +128,6 @@ int main()
         delta_time = elapsed.count();
         last_frame = current_frame;
 
-
-
         gfxWindowPumpEvents(window);
 
         yaw += gfxWindowXMouseOffset(window) * 0.1f;
@@ -166,9 +164,6 @@ int main()
 
         fly_camera.center = fly_camera.eye + camera_front;
         fly_camera.up = camera_up;
-
-        std::cout << "x: " << fly_camera.center.x << std::endl;
-        std::cout << "z: " << fly_camera.center.z << std::endl;
 
         UpdateFlyCameraMatrix(gfx, fly_camera);
 
