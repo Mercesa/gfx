@@ -44,8 +44,10 @@ struct Params
 
 struct Result
 {
-    float4 color    : SV_Target0;
-    float2 velocity : SV_Target1;
+    float4 color            : SV_Target0;
+    float2 velocity         : SV_Target1;
+    float4 albedo           : SV_Target2;
+    float4 normal_ao        : SV_Target3;
 };
 
 // https://seblagarde.wordpress.com/2011/08/17/hello-world/
@@ -166,6 +168,8 @@ Result main(in Params params)
     Result result;
     result.color    = float4(color, 1.0f);
     result.velocity = CalculateVelocity(params);
+    result.albedo = float4(albedo, 1.0f);
+    result.normal_ao = float4(normal, ao);
 
     return result;
 }
