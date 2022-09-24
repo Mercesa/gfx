@@ -41,7 +41,7 @@ char const *scene_path           = "data/SciFiHelmet/glTF/SciFiHelmet.gltf";
 
 int main()
 {
-    GfxWindow  window = gfxCreateWindow(1280, 720, "gfx - PBR");
+    GfxWindow  window = gfxCreateWindow(1920, 1080, "gfx - PBR");
     GfxContext gfx    = gfxCreateContext(window);
     GfxScene   scene  = gfxCreateScene();
     gfxImGuiInitialize(gfx);
@@ -55,7 +55,7 @@ int main()
     GfxConstRef<GfxImage> environment_image = gfxSceneFindObjectByAssetFile<GfxImage>(scene, environment_map_path);
 
     GfxTexture environment_map = (environment_image ? gpu_scene.textures[(uint32_t)environment_image] : GfxTexture());
-
+    
     IBL const ibl = ConvolveIBL(gfx, environment_map);
 
     // Create our color (i.e., HDR) and depth buffers
@@ -105,7 +105,7 @@ int main()
     gfxProgramSetParameter(gfx, pbr_program, "g_IrradianceBuffer", ibl.irradiance_buffer);
     gfxProgramSetParameter(gfx, pbr_program, "g_EnvironmentBuffer", ibl.environment_buffer);
 
-    gfxProgramSetParameter(gfx, sky_program, "g_Envi&ronmentBuffer", ibl.environment_buffer);
+    gfxProgramSetParameter(gfx, sky_program, "g_EnvironmentBuffer", ibl.environment_buffer);
 
     gfxProgramSetParameter(gfx, taa_program, "g_ColorBuffer", color_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_HistoryBuffer", history_buffer);
@@ -130,8 +130,9 @@ int main()
 
         gfxWindowPumpEvents(window);
 
-        yaw += gfxWindowXMouseOffset(window) * 0.1f;
-        pitch += gfxWindowYMouseOffset(window) * 0.1f;
+        float cursor_speed = 0.3f;
+        yaw += gfxWindowXMouseOffset(window) * cursor_speed;
+        pitch += gfxWindowYMouseOffset(window) * cursor_speed;
 
         glm::vec3 direction;
         direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
