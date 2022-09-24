@@ -65,6 +65,12 @@ int main()
     GfxTexture velocity_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16_FLOAT);
     GfxTexture depth_buffer    = gfxCreateTexture2D(gfx, DXGI_FORMAT_D32_FLOAT);
 
+
+    GfxTexture metal_roughness_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    GfxTexture normal_ao_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    GfxTexture albedo_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+
     // Create our PBR programs and kernels
     GfxProgram pbr_program = gfxCreateProgram(gfx, "pbr");
     GfxProgram sky_program = gfxCreateProgram(gfx, "sky");
@@ -73,6 +79,9 @@ int main()
     GfxDrawState pbr_draw_state;
     gfxDrawStateSetColorTarget(pbr_draw_state, 0, color_buffer);
     gfxDrawStateSetColorTarget(pbr_draw_state, 1, velocity_buffer);
+    gfxDrawStateSetColorTarget(pbr_draw_state, 2, albedo_buffer);
+    gfxDrawStateSetColorTarget(pbr_draw_state, 3, normal_ao_buffer);
+    //gfxDrawStateSetColorTarget(pbr_draw_state, 4, metal_roughness_buffer);
     gfxDrawStateSetDepthStencilTarget(pbr_draw_state, depth_buffer);
 
     GfxKernel pbr_kernel = gfxCreateGraphicsKernel(gfx, pbr_program, pbr_draw_state);
@@ -193,6 +202,10 @@ int main()
         gfxCommandClearTexture(gfx, color_buffer);
         gfxCommandClearTexture(gfx, velocity_buffer);
         gfxCommandClearTexture(gfx, depth_buffer);
+        gfxCommandClearTexture(gfx, normal_ao_buffer);
+        gfxCommandClearTexture(gfx, albedo_buffer);
+        gfxCommandClearTexture(gfx, metal_roughness_buffer);
+
 
         // Draw all the meshes in the scene
         uint32_t const instance_count = gfxSceneGetInstanceCount(scene);
@@ -243,6 +256,10 @@ int main()
     gfxDestroyTexture(gfx, history_buffer);
     gfxDestroyTexture(gfx, resolve_buffer);
     gfxDestroyTexture(gfx, velocity_buffer);
+
+    gfxDestroyTexture(gfx, normal_ao_buffer);
+    gfxDestroyTexture(gfx, albedo_buffer);
+    gfxDestroyTexture(gfx, metal_roughness_buffer);
 
     ReleaseIBL(gfx, ibl);
     gfxDestroySamplerState(gfx, linear_sampler);
