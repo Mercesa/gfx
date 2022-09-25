@@ -1,0 +1,16 @@
+RWTexture2D<float4> g_Output;
+
+[numthreads(8, 8, 1)]
+void main(in uint2 did : SV_DispatchThreadID)
+{
+    float4 color = g_Output.Load(did);
+
+    // Tonemap the color output
+    color *= 0.75f;
+    color /= 1.0f + color;
+    color  = saturate(color);
+    color  = sqrt(color);
+    color  = color * color * (3.0f - 2.0f * color);
+
+    g_Output[did] = color;
+}

@@ -75,7 +75,9 @@ int main()
     GfxProgram pbr_program = gfxCreateProgram(gfx, "pbr");
     GfxProgram sky_program = gfxCreateProgram(gfx, "sky");
     GfxProgram taa_program = gfxCreateProgram(gfx, "taa");
+    GfxProgram post_program = gfxCreateProgram(gfx, "post");
 
+    
     GfxDrawState pbr_draw_state;
     gfxDrawStateSetColorTarget(pbr_draw_state, 0, color_buffer);
     gfxDrawStateSetColorTarget(pbr_draw_state, 1, velocity_buffer);
@@ -85,6 +87,8 @@ int main()
     gfxDrawStateSetDepthStencilTarget(pbr_draw_state, depth_buffer);
 
     GfxKernel pbr_kernel = gfxCreateGraphicsKernel(gfx, pbr_program, pbr_draw_state);
+
+    GfxKernel post_kernel = gfxCreateComputeKernel(gfx, post_program);
 
     GfxDrawState sky_draw_state;
     gfxDrawStateSetColorTarget(sky_draw_state, 0, color_buffer);
@@ -96,7 +100,7 @@ int main()
     gfxDrawStateSetColorTarget(reproject_draw_state, 0, resolve_buffer);
 
     GfxKernel reproject_kernel = gfxCreateGraphicsKernel(gfx, taa_program, reproject_draw_state, "Reproject");
-    GfxKernel resolve_kernel   = gfxCreateGraphicsKernel(gfx, taa_program, "Resolve");
+    GfxKernel resolve_kernel   = gfxCreateGraphicsKernel(gfx, taa_program, reproject_draw_state, "Resolve");
 
     // Create our sampler states
     GfxSamplerState linear_sampler  = gfxCreateSamplerState(gfx, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
@@ -121,6 +125,9 @@ int main()
     gfxProgramSetParameter(gfx, taa_program, "g_ResolveBuffer", resolve_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_VelocityBuffer", velocity_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_DepthBuffer", depth_buffer);
+
+    // Post process paramaters
+    gfxProgramSetParameter(gfx, post_program, "g_Output", resolve_buffer);
 
     // Run the application loop
     FlyCamera fly_camera = CreateFlyCamera(gfx, glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f));
@@ -245,6 +252,12 @@ int main()
         gfxCommandBindKernel(gfx, resolve_kernel);
         gfxCommandDraw(gfx, 3);
 
+        // Post kernel
+        gfxCommandBindKernel(gfx, post_kernel);
+        gfxCommandDispatch(gfx, 1920 / 8, 1080 / 8, 1);
+
+        gfxCommandCopyTextureToBackBuffer(gfx, resolve_buffer);
+
         // And submit the frame
         gfxImGuiRender();
         gfxFrame(gfx);
@@ -265,6 +278,9 @@ int main()
     gfxDestroySamplerState(gfx, linear_sampler);
     gfxDestroySamplerState(gfx, nearest_sampler);
 
+
+    gfxDestroyKernel(gfx, post_kernel);
+    gfxDestroyProgram(gfx, post_program);
     gfxDestroyKernel(gfx, pbr_kernel);
     gfxDestroyProgram(gfx, pbr_program);
     gfxDestroyKernel(gfx, sky_kernel);

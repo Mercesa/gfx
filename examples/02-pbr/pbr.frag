@@ -157,13 +157,6 @@ Result main(in Params params)
 
     float3 color = diffuse + specular;
 
-    // Tonemap the color output
-    color *= 0.75f;
-    color /= 1.0f + color;
-    color  = saturate(color);
-    color  = sqrt(color);
-    color  = color * color * (3.0f - 2.0f * color);
-
     // Populate our multiple render targets (i.e., MRT)
     Result result;
     result.color    = float4(color, 1.0f);
