@@ -138,25 +138,6 @@ Result main(in Params params)
     float  metallicity = material.metallicity_roughness.x;
     float  ao          = material.ao_normal_emissivity.x;
 
-    float3 view_direction       = normalize(g_Eye - params.world);
-    float  n_dot_v              = max(dot(normal, view_direction), 0.0f);
-    float2 brdf_uv              = float2(max(dot(normal, view_direction), 0.0f), roughness);
-    float3 reflection_direction = reflect(-view_direction, normal);
-
-    float3 F0 = lerp(0.04f, albedo, metallicity);
-    float3 F  = FresnelSchlickRoughness(n_dot_v, F0, roughness);
-    float3 kD = (1.0f - F) * (1.0f - metallicity * (1.0f - roughness));
-
-    float2 brdf        = g_BrdfBuffer.SampleLevel(g_LinearSampler, brdf_uv, 0.0f).xy;
-    float3 irradiance  = g_IrradianceBuffer.SampleLevel(g_LinearSampler, normal, 0.0f).xyz;
-    float3 environment = g_EnvironmentBuffer.SampleLevel(g_LinearSampler, reflection_direction, roughness * 4.0f).xyz;
-
-    float  so       = saturate(ao + (ao + n_dot_v) * (ao + n_dot_v) - 1.0f);
-    float3 diffuse  = kD * ao * albedo * irradiance;
-    float3 specular = (F * brdf.x + brdf.y) * lerp(ao * (F * brdf.x + brdf.y) * irradiance, environment, so);
-
-    float3 color = diffuse + specular;
-
     // Populate our multiple render targets (i.e., MRT)
     Result result;
     result.world_pos    = float4(params.world, roughness);
