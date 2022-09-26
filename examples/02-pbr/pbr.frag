@@ -44,7 +44,7 @@ struct Params
 
 struct Result
 {
-    float4 color            : SV_Target0;
+    float4 world_pos        : SV_Target0;
     float2 velocity         : SV_Target1;
     float4 albedo           : SV_Target2;
     float4 normal_ao        : SV_Target3;
@@ -159,9 +159,9 @@ Result main(in Params params)
 
     // Populate our multiple render targets (i.e., MRT)
     Result result;
-    result.color    = float4(color, 1.0f);
+    result.world_pos    = float4(params.world, roughness);
     result.velocity = CalculateVelocity(params);
-    result.albedo = float4(albedo, 1.0f);
+    result.albedo = float4(albedo, metallicity);
     result.normal_ao = float4(normal, ao);
 
     return result;

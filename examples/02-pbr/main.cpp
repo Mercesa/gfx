@@ -68,7 +68,8 @@ int main()
 
     GfxTexture metal_roughness_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
     GfxTexture normal_ao_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
-    GfxTexture albedo_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    GfxTexture albedo_metal_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    GfxTexture world_roughness_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 
     // Create our PBR programs and kernels
@@ -76,12 +77,13 @@ int main()
     GfxProgram sky_program = gfxCreateProgram(gfx, "sky");
     GfxProgram taa_program = gfxCreateProgram(gfx, "taa");
     GfxProgram post_program = gfxCreateProgram(gfx, "post");
+    GfxProgram deferred_program = gfxCreateProgram(gfx, "deferred");
 
     
     GfxDrawState pbr_draw_state;
-    gfxDrawStateSetColorTarget(pbr_draw_state, 0, color_buffer);
+    gfxDrawStateSetColorTarget(pbr_draw_state, 0, world_roughness_buffer);
     gfxDrawStateSetColorTarget(pbr_draw_state, 1, velocity_buffer);
-    gfxDrawStateSetColorTarget(pbr_draw_state, 2, albedo_buffer);
+    gfxDrawStateSetColorTarget(pbr_draw_state, 2, albedo_metal_buffer);
     gfxDrawStateSetColorTarget(pbr_draw_state, 3, normal_ao_buffer);
     //gfxDrawStateSetColorTarget(pbr_draw_state, 4, metal_roughness_buffer);
     gfxDrawStateSetDepthStencilTarget(pbr_draw_state, depth_buffer);
@@ -102,6 +104,13 @@ int main()
     GfxKernel reproject_kernel = gfxCreateGraphicsKernel(gfx, taa_program, reproject_draw_state, "Reproject");
     GfxKernel resolve_kernel   = gfxCreateGraphicsKernel(gfx, taa_program, reproject_draw_state, "Resolve");
 
+
+    // Deferred
+    GfxDrawState deferred_draw_state;
+    gfxDrawStateSetColorTarget(deferred_draw_state, 0, color_buffer);
+    GfxKernel deferred_kernel = gfxCreateGraphicsKernel(gfx, deferred_program, deferred_draw_state);
+
+
     // Create our sampler states
     GfxSamplerState linear_sampler  = gfxCreateSamplerState(gfx, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
     GfxSamplerState nearest_sampler = gfxCreateSamplerState(gfx, D3D12_FILTER_MIN_MAG_MIP_POINT);
@@ -110,6 +119,8 @@ int main()
     gfxProgramSetParameter(gfx, sky_program, "g_LinearSampler", linear_sampler);
     gfxProgramSetParameter(gfx, taa_program, "g_LinearSampler", linear_sampler);
     gfxProgramSetParameter(gfx, taa_program, "g_NearestSampler", nearest_sampler);
+    gfxProgramSetParameter(gfx, deferred_program, "g_NearestSampler", nearest_sampler);
+
 
     // Bind a bunch of shader parameters
     BindGpuScene(gfx, pbr_program, gpu_scene);
@@ -125,6 +136,15 @@ int main()
     gfxProgramSetParameter(gfx, taa_program, "g_ResolveBuffer", resolve_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_VelocityBuffer", velocity_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_DepthBuffer", depth_buffer);
+
+    // Deferred parameters
+    gfxProgramSetParameter(gfx, deferred_program, "g_BrdfBuffer", ibl.brdf_buffer);
+    gfxProgramSetParameter(gfx, sky_program, "g_EnvironmentBuffer", ibl.environment_buffer);
+    gfxProgramSetParameter(gfx, deferred_program, "g_IrradianceBuffer", ibl.irradiance_buffer);
+    gfxProgramSetParameter(gfx, deferred_program, "g_Albedo", albedo_metal_buffer);
+    gfxProgramSetParameter(gfx, deferred_program, "g_Normal_Ao", normal_ao_buffer);
+    gfxProgramSetParameter(gfx, deferred_program, "g_World", world_roughness_buffer);
+
 
     // Post process paramaters
     gfxProgramSetParameter(gfx, post_program, "g_Output", resolve_buffer);
@@ -192,6 +212,7 @@ int main()
 
         gfxProgramSetParameter(gfx, pbr_program, "g_Eye", fly_camera.eye);
         gfxProgramSetParameter(gfx, sky_program, "g_Eye", fly_camera.eye);
+        gfxProgramSetParameter(gfx, deferred_program, "g_Eye", fly_camera.eye);
 
         gfxProgramSetParameter(gfx, sky_program, "g_ViewProjectionInverse", glm::inverse(fly_camera.view_proj));
 
@@ -204,14 +225,17 @@ int main()
 
         gfxProgramSetParameter(gfx, sky_program, "g_TexelSize", texel_size);
         gfxProgramSetParameter(gfx, taa_program, "g_TexelSize", texel_size);
+        gfxProgramSetParameter(gfx, deferred_program, "g_TexelSize", texel_size);
+
 
         // Clear our render targets
         gfxCommandClearTexture(gfx, color_buffer);
         gfxCommandClearTexture(gfx, velocity_buffer);
         gfxCommandClearTexture(gfx, depth_buffer);
         gfxCommandClearTexture(gfx, normal_ao_buffer);
-        gfxCommandClearTexture(gfx, albedo_buffer);
+        gfxCommandClearTexture(gfx, albedo_metal_buffer);
         gfxCommandClearTexture(gfx, metal_roughness_buffer);
+        gfxCommandClearTexture(gfx, world_roughness_buffer);
 
 
         // Draw all the meshes in the scene
@@ -241,9 +265,14 @@ int main()
         gfxCommandBindKernel(gfx, sky_kernel);
         gfxCommandDraw(gfx, 3);
 
+        gfxCommandBindKernel(gfx, deferred_kernel);
+        gfxCommandDraw(gfx, 3);
+
         // Reproject the temporal history (a.k.a., TAA)
         gfxCommandBindKernel(gfx, reproject_kernel);
         gfxCommandDraw(gfx, 3);
+
+
 
         // Update the temporal history with the new anti-aliased frame
         gfxCommandCopyTexture(gfx, history_buffer, resolve_buffer);
@@ -271,8 +300,10 @@ int main()
     gfxDestroyTexture(gfx, velocity_buffer);
 
     gfxDestroyTexture(gfx, normal_ao_buffer);
-    gfxDestroyTexture(gfx, albedo_buffer);
+    gfxDestroyTexture(gfx, albedo_metal_buffer);
     gfxDestroyTexture(gfx, metal_roughness_buffer);
+    gfxDestroyTexture(gfx, world_roughness_buffer);
+
 
     ReleaseIBL(gfx, ibl);
     gfxDestroySamplerState(gfx, linear_sampler);
@@ -288,6 +319,8 @@ int main()
     gfxDestroyKernel(gfx, resolve_kernel);
     gfxDestroyKernel(gfx, reproject_kernel);
     gfxDestroyProgram(gfx, taa_program);
+    gfxDestroyKernel(gfx, deferred_kernel);
+    gfxDestroyProgram(gfx, deferred_program);
 
     gfxImGuiTerminate();
     gfxDestroyScene(scene);
