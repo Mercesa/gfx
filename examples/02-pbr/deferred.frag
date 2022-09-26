@@ -45,5 +45,5 @@ float4 main(in float4 pos : SV_Position) : SV_Target
     float3 specular = (F * brdf.x + brdf.y) * lerp(normal_ao.a * (F * brdf.x + brdf.y) * irradiance, environment, so);
 
     float3 color = diffuse + specular;
-    return float4(color, 1.0);
+    return float4(color.rgb, 1.0);
 }

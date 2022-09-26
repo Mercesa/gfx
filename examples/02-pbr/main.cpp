@@ -139,7 +139,7 @@ int main()
 
     // Deferred parameters
     gfxProgramSetParameter(gfx, deferred_program, "g_BrdfBuffer", ibl.brdf_buffer);
-    gfxProgramSetParameter(gfx, sky_program, "g_EnvironmentBuffer", ibl.environment_buffer);
+    gfxProgramSetParameter(gfx, deferred_program, "g_EnvironmentBuffer", ibl.environment_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_IrradianceBuffer", ibl.irradiance_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_Albedo", albedo_metal_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_Normal_Ao", normal_ao_buffer);
