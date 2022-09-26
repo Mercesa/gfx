@@ -261,11 +261,11 @@ int main()
             gfxCommandDrawIndexed(gfx, mesh.count, 1, mesh.first_index, mesh.base_vertex);
         }
 
+        gfxCommandBindKernel(gfx, deferred_kernel);
+        gfxCommandDraw(gfx, 3);
+        
         // Draw our skybox
         gfxCommandBindKernel(gfx, sky_kernel);
-        gfxCommandDraw(gfx, 3);
-
-        gfxCommandBindKernel(gfx, deferred_kernel);
         gfxCommandDraw(gfx, 3);
 
         // Reproject the temporal history (a.k.a., TAA)
