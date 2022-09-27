@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ****************************************************************************/
 #include "../common/gpu_scene.hlsli"
+#include "../common/packing.hlsli"
 
 float3 g_Eye;
 uint   g_InstanceId;
@@ -79,6 +80,8 @@ Result main(in Params params)
     uint metallicity_map = asuint(material.metallicity_roughness.y);
     uint normal_map      = asuint(material.ao_normal_emissivity.y);
     uint ao_map          = asuint(material.ao_normal_emissivity.x);
+    
+    
 
     if(albedo_map != uint(-1))
     {
@@ -112,7 +115,7 @@ Result main(in Params params)
 
         float    invmax  = rsqrt(max(dot(tangent, tangent), dot(bitangent, bitangent)));
         float3x3 tbn     = transpose(float3x3(tangent * invmax, bitangent * invmax, normal));
-        float3   disturb = 2.0f * g_Textures[normal_map].Sample(g_TextureSampler, params.uv).xyz - 1.0f;
+        float3   disturb = g_Textures[normal_map].Sample(g_TextureSampler, params.uv).xyz * 2.0 - 1.0f;
 
         params.normal = mul(tbn, disturb);
     }
@@ -126,6 +129,7 @@ Result main(in Params params)
         material.ao_normal_emissivity.x = 1.0f;
     }
 
+
     // Post-process our material properties
     material.albedo.xyz              = sqrt(material.albedo.xyz);
     material.metallicity_roughness.x = saturate(material.metallicity_roughness.x);
@@ -137,12 +141,14 @@ Result main(in Params params)
     float  roughness   = material.metallicity_roughness.z;
     float  metallicity = material.metallicity_roughness.x;
     float  ao          = material.ao_normal_emissivity.x;
+    
+    uint packed_roughness_metal = pack_2x16_uint(float2(roughness, metallicity));
 
     // Populate our multiple render targets (i.e., MRT)
     Result result;
     result.world_pos    = float4(params.world, roughness);
     result.velocity = CalculateVelocity(params);
-    result.albedo = float4(albedo, metallicity);
+    result.albedo = float4(albedo, asfloat(packed_roughness_metal));
     result.normal_ao = float4(normal, ao);
 
     return result;

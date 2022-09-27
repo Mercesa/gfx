@@ -31,11 +31,18 @@ SOFTWARE.
 #include <iostream>
 #include <chrono>
 
+
 namespace
 {
-
 char const *environment_map_path = "data/kiara_1_dawn_4k.hdr";
 char const *scene_path           = "data/SciFiHelmet/glTF/SciFiHelmet.gltf";
+
+struct Light {
+    glm::vec3 position;
+    float pad0;
+    glm::vec3 color;
+    float pad1;
+};
 
 } //! unnamed namespace
 
@@ -68,7 +75,7 @@ int main()
 
     GfxTexture metal_roughness_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
     GfxTexture normal_ao_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
-    GfxTexture albedo_metal_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    GfxTexture albedo_metal_roughness_packed_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R32G32B32A32_FLOAT);
     GfxTexture world_roughness_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 
@@ -83,7 +90,7 @@ int main()
     GfxDrawState pbr_draw_state;
     gfxDrawStateSetColorTarget(pbr_draw_state, 0, world_roughness_buffer);
     gfxDrawStateSetColorTarget(pbr_draw_state, 1, velocity_buffer);
-    gfxDrawStateSetColorTarget(pbr_draw_state, 2, albedo_metal_buffer);
+    gfxDrawStateSetColorTarget(pbr_draw_state, 2, albedo_metal_roughness_packed_buffer);
     gfxDrawStateSetColorTarget(pbr_draw_state, 3, normal_ao_buffer);
     //gfxDrawStateSetColorTarget(pbr_draw_state, 4, metal_roughness_buffer);
     gfxDrawStateSetDepthStencilTarget(pbr_draw_state, depth_buffer);
@@ -141,7 +148,7 @@ int main()
     gfxProgramSetParameter(gfx, deferred_program, "g_BrdfBuffer", ibl.brdf_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_EnvironmentBuffer", ibl.environment_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_IrradianceBuffer", ibl.irradiance_buffer);
-    gfxProgramSetParameter(gfx, deferred_program, "g_Albedo", albedo_metal_buffer);
+    gfxProgramSetParameter(gfx, deferred_program, "g_Albedo", albedo_metal_roughness_packed_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_Normal_Ao", normal_ao_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_World", world_roughness_buffer);
 
@@ -233,7 +240,7 @@ int main()
         gfxCommandClearTexture(gfx, velocity_buffer);
         gfxCommandClearTexture(gfx, depth_buffer);
         gfxCommandClearTexture(gfx, normal_ao_buffer);
-        gfxCommandClearTexture(gfx, albedo_metal_buffer);
+        gfxCommandClearTexture(gfx, albedo_metal_roughness_packed_buffer);
         gfxCommandClearTexture(gfx, metal_roughness_buffer);
         gfxCommandClearTexture(gfx, world_roughness_buffer);
 
@@ -300,7 +307,7 @@ int main()
     gfxDestroyTexture(gfx, velocity_buffer);
 
     gfxDestroyTexture(gfx, normal_ao_buffer);
-    gfxDestroyTexture(gfx, albedo_metal_buffer);
+    gfxDestroyTexture(gfx, albedo_metal_roughness_packed_buffer);
     gfxDestroyTexture(gfx, metal_roughness_buffer);
     gfxDestroyTexture(gfx, world_roughness_buffer);
 
