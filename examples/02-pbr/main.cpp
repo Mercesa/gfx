@@ -27,6 +27,7 @@ SOFTWARE.
 #include "gpu_scene.h"
 #include "fly_camera.h"
 #include "glm/gtc/matrix_transform.hpp"
+#include "math_helper.h"
 
 #include <iostream>
 #include <chrono>
@@ -46,6 +47,8 @@ struct Light {
 
 } //! unnamed namespace
 
+
+    
 int main()
 {
     GfxWindow  window = gfxCreateWindow(1920, 1080, "gfx - PBR");
@@ -73,7 +76,6 @@ int main()
     GfxTexture depth_buffer    = gfxCreateTexture2D(gfx, DXGI_FORMAT_D32_FLOAT);
 
 
-    GfxTexture metal_roughness_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
     GfxTexture normal_ao_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
     GfxTexture albedo_metal_roughness_packed_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R32G32B32A32_FLOAT);
     GfxTexture world_roughness_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -241,7 +243,6 @@ int main()
         gfxCommandClearTexture(gfx, depth_buffer);
         gfxCommandClearTexture(gfx, normal_ao_buffer);
         gfxCommandClearTexture(gfx, albedo_metal_roughness_packed_buffer);
-        gfxCommandClearTexture(gfx, metal_roughness_buffer);
         gfxCommandClearTexture(gfx, world_roughness_buffer);
 
 
@@ -290,7 +291,10 @@ int main()
 
         // Post kernel
         gfxCommandBindKernel(gfx, post_kernel);
-        gfxCommandDispatch(gfx, 1920 / 8, 1080 / 8, 1);
+        gfxCommandDispatch(gfx, 
+            divide_up(gfxGetBackBufferWidth(gfx), 8), 
+            divide_up(gfxGetBackBufferHeight(gfx),8), 
+            1);
 
         gfxCommandCopyTextureToBackBuffer(gfx, resolve_buffer);
 
@@ -308,7 +312,6 @@ int main()
 
     gfxDestroyTexture(gfx, normal_ao_buffer);
     gfxDestroyTexture(gfx, albedo_metal_roughness_packed_buffer);
-    gfxDestroyTexture(gfx, metal_roughness_buffer);
     gfxDestroyTexture(gfx, world_roughness_buffer);
 
 
