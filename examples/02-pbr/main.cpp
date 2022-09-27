@@ -51,7 +51,7 @@ struct Light {
     
 int main()
 {
-    GfxWindow  window = gfxCreateWindow(1920, 1080, "gfx - PBR");
+    GfxWindow  window = gfxCreateWindow(1920, 1080, "Niels Gfx");
     GfxContext gfx    = gfxCreateContext(window);
     GfxScene   scene  = gfxCreateScene();
     gfxImGuiInitialize(gfx);
@@ -280,8 +280,6 @@ int main()
         gfxCommandBindKernel(gfx, reproject_kernel);
         gfxCommandDraw(gfx, 3);
 
-
-
         // Update the temporal history with the new anti-aliased frame
         gfxCommandCopyTexture(gfx, history_buffer, resolve_buffer);
 
@@ -292,8 +290,8 @@ int main()
         // Post kernel
         gfxCommandBindKernel(gfx, post_kernel);
         gfxCommandDispatch(gfx, 
-            divide_up(gfxGetBackBufferWidth(gfx), 8), 
-            divide_up(gfxGetBackBufferHeight(gfx),8), 
+            divide_up(static_cast<float>(gfxGetBackBufferWidth(gfx)), 8.0f), 
+            divide_up(static_cast<float>(gfxGetBackBufferHeight(gfx)),8.0f), 
             1);
 
         gfxCommandCopyTextureToBackBuffer(gfx, resolve_buffer);
