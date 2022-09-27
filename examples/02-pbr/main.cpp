@@ -69,7 +69,7 @@ int main()
     IBL const ibl = ConvolveIBL(gfx, environment_map);
 
     // Create our color (i.e., HDR) and depth buffers
-    GfxTexture color_buffer    = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    GfxTexture color_buffer    = gfxCreateTexture2D(gfx, DXGI_FORMAT_R32G32B32A32_FLOAT);
     GfxTexture history_buffer  = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
     GfxTexture resolve_buffer  = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16B16A16_FLOAT);
     GfxTexture velocity_buffer = gfxCreateTexture2D(gfx, DXGI_FORMAT_R16G16_FLOAT);
@@ -82,13 +82,18 @@ int main()
 
 
     // Create our PBR programs and kernels
-    GfxProgram pbr_program = gfxCreateProgram(gfx, "pbr");
     GfxProgram sky_program = gfxCreateProgram(gfx, "sky");
     GfxProgram taa_program = gfxCreateProgram(gfx, "taa");
     GfxProgram post_program = gfxCreateProgram(gfx, "post");
     GfxProgram deferred_program = gfxCreateProgram(gfx, "deferred");
+    GfxProgram pbr_program = gfxCreateProgram(gfx, "pbr");
 
-    
+    // Create our sampler states
+    GfxSamplerState linear_sampler  = gfxCreateSamplerState(gfx, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+    GfxSamplerState nearest_sampler = gfxCreateSamplerState(gfx, D3D12_FILTER_MIN_MAG_MIP_POINT);
+
+    // PBR
+    ////////
     GfxDrawState pbr_draw_state;
     gfxDrawStateSetColorTarget(pbr_draw_state, 0, world_roughness_buffer);
     gfxDrawStateSetColorTarget(pbr_draw_state, 1, velocity_buffer);
@@ -97,42 +102,8 @@ int main()
     //gfxDrawStateSetColorTarget(pbr_draw_state, 4, metal_roughness_buffer);
     gfxDrawStateSetDepthStencilTarget(pbr_draw_state, depth_buffer);
 
+
     GfxKernel pbr_kernel = gfxCreateGraphicsKernel(gfx, pbr_program, pbr_draw_state);
-
-    GfxKernel post_kernel = gfxCreateComputeKernel(gfx, post_program);
-
-    GfxDrawState sky_draw_state;
-    gfxDrawStateSetColorTarget(sky_draw_state, 0, color_buffer);
-    gfxDrawStateSetDepthStencilTarget(sky_draw_state, depth_buffer);
-
-    GfxKernel sky_kernel = gfxCreateGraphicsKernel(gfx, sky_program, sky_draw_state);
-
-    GfxDrawState reproject_draw_state;
-    gfxDrawStateSetColorTarget(reproject_draw_state, 0, resolve_buffer);
-
-    GfxKernel reproject_kernel = gfxCreateGraphicsKernel(gfx, taa_program, reproject_draw_state, "Reproject");
-    GfxKernel resolve_kernel   = gfxCreateGraphicsKernel(gfx, taa_program, reproject_draw_state, "Resolve");
-
-
-    // Deferred
-    GfxDrawState deferred_draw_state;
-    gfxDrawStateSetColorTarget(deferred_draw_state, 0, color_buffer);
-    GfxKernel deferred_kernel = gfxCreateGraphicsKernel(gfx, deferred_program, deferred_draw_state);
-
-
-    // Create our sampler states
-    GfxSamplerState linear_sampler  = gfxCreateSamplerState(gfx, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
-    GfxSamplerState nearest_sampler = gfxCreateSamplerState(gfx, D3D12_FILTER_MIN_MAG_MIP_POINT);
-
-    gfxProgramSetParameter(gfx, pbr_program, "g_LinearSampler", linear_sampler);
-    gfxProgramSetParameter(gfx, sky_program, "g_LinearSampler", linear_sampler);
-    gfxProgramSetParameter(gfx, taa_program, "g_LinearSampler", linear_sampler);
-    gfxProgramSetParameter(gfx, taa_program, "g_NearestSampler", nearest_sampler);
-    gfxProgramSetParameter(gfx, deferred_program, "g_NearestSampler", nearest_sampler);
-
-
-    // Bind a bunch of shader parameters
-    BindGpuScene(gfx, pbr_program, gpu_scene);
 
     gfxProgramSetParameter(gfx, pbr_program, "g_BrdfBuffer", ibl.brdf_buffer);
     gfxProgramSetParameter(gfx, pbr_program, "g_IrradianceBuffer", ibl.irradiance_buffer);
@@ -140,13 +111,30 @@ int main()
 
     gfxProgramSetParameter(gfx, sky_program, "g_EnvironmentBuffer", ibl.environment_buffer);
 
+    // Bind a bunch of shader parameters
+    BindGpuScene(gfx, pbr_program, gpu_scene);
+    
+    // TAA
+    ///////
+    GfxDrawState reproject_draw_state;
+    gfxDrawStateSetColorTarget(reproject_draw_state, 0, resolve_buffer);
+
+    GfxKernel reproject_kernel = gfxCreateGraphicsKernel(gfx, taa_program, reproject_draw_state, "Reproject");
+    GfxKernel resolve_kernel = gfxCreateGraphicsKernel(gfx, taa_program, reproject_draw_state, "Resolve");
+
     gfxProgramSetParameter(gfx, taa_program, "g_ColorBuffer", color_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_HistoryBuffer", history_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_ResolveBuffer", resolve_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_VelocityBuffer", velocity_buffer);
     gfxProgramSetParameter(gfx, taa_program, "g_DepthBuffer", depth_buffer);
 
-    // Deferred parameters
+    // DEFERRED
+    ///////
+    GfxDrawState deferred_draw_state;
+    
+    gfxDrawStateSetColorTarget(deferred_draw_state, 0, color_buffer);
+    GfxKernel deferred_kernel = gfxCreateGraphicsKernel(gfx, deferred_program, deferred_draw_state);
+
     gfxProgramSetParameter(gfx, deferred_program, "g_BrdfBuffer", ibl.brdf_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_EnvironmentBuffer", ibl.environment_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_IrradianceBuffer", ibl.irradiance_buffer);
@@ -154,9 +142,27 @@ int main()
     gfxProgramSetParameter(gfx, deferred_program, "g_Normal_Ao", normal_ao_buffer);
     gfxProgramSetParameter(gfx, deferred_program, "g_World", world_roughness_buffer);
 
+    // POST
+    ////////
+    GfxKernel post_kernel = gfxCreateComputeKernel(gfx, post_program);
 
-    // Post process paramaters
     gfxProgramSetParameter(gfx, post_program, "g_Output", resolve_buffer);
+
+    // Set samplers
+    gfxProgramSetParameter(gfx, pbr_program, "g_LinearSampler", linear_sampler);
+    gfxProgramSetParameter(gfx, sky_program, "g_LinearSampler", linear_sampler);
+    gfxProgramSetParameter(gfx, taa_program, "g_LinearSampler", linear_sampler);
+    gfxProgramSetParameter(gfx, taa_program, "g_NearestSampler", nearest_sampler);
+    gfxProgramSetParameter(gfx, deferred_program, "g_NearestSampler", nearest_sampler);
+
+
+    // SKY
+    //////
+    GfxDrawState sky_draw_state;
+    gfxDrawStateSetColorTarget(sky_draw_state, 0, color_buffer);
+    gfxDrawStateSetDepthStencilTarget(sky_draw_state, depth_buffer);
+
+    GfxKernel sky_kernel = gfxCreateGraphicsKernel(gfx, sky_program, sky_draw_state);
 
     // Run the application loop
     FlyCamera fly_camera = CreateFlyCamera(gfx, glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f));
