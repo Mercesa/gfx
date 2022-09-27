@@ -10,4 +10,11 @@ float2 unpack_uint_2x16(uint u) {
         f16tof32((u >> 16) & 0xffff));
 }
 
+float roughness_to_perceptual_roughness(float r) {
+    return sqrt(r);
+}
+
+float perceptual_roughness_to_roughness(float r) {
+    return r * r;
+}
 #endif

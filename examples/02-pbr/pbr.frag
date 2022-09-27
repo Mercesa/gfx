@@ -51,12 +51,6 @@ struct Result
     float4 normal_ao        : SV_Target3;
 };
 
-// https://seblagarde.wordpress.com/2011/08/17/hello-world/
-float3 FresnelSchlickRoughness(in float n_dot_v, in float3 F0, in float roughness)
-{
-    return F0 + (max(F0, 1.0f - roughness) - F0) * pow(1.0f - n_dot_v, 5.0f);
-}
-
 // Calculates motion vectors in UV-space (i.e., normalized [0, 1] coordinates)
 float2 CalculateVelocity(in Params params)
 {
@@ -142,7 +136,7 @@ Result main(in Params params)
     float  metallicity = material.metallicity_roughness.x;
     float  ao          = material.ao_normal_emissivity.x;
     
-    uint packed_roughness_metal = pack_2x16_uint(float2(roughness, metallicity));
+    uint packed_roughness_metal = pack_2x16_uint(float2(roughness_to_perceptual_roughness(roughness), metallicity));
 
     // Populate our multiple render targets (i.e., MRT)
     Result result;
